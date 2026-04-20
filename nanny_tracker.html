@@ -1,0 +1,495 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Трекер смен</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #F5F3EF;
+    --surface: #FFFFFF;
+    --border: #E2DDD6;
+    --text: #1A1815;
+    --muted: #8C8880;
+    --green: #2D6A4F;
+    --green-light: #D8EDDF;
+    --red: #C1121F;
+    --red-light: #FFE5E7;
+    --accent: #B5936B;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    padding: 0;
+  }
+
+  .container {
+    max-width: 420px;
+    margin: 0 auto;
+    padding: 24px 16px 48px;
+  }
+
+  .header {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    margin-bottom: 28px;
+  }
+  .header-title {
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--muted);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+  .header-date {
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    color: var(--muted);
+  }
+
+  /* CLOCK CARD */
+  .clock-card {
+    background: var(--surface);
+    border-radius: 20px;
+    padding: 28px 24px 24px;
+    margin-bottom: 16px;
+    border: 1px solid var(--border);
+    text-align: center;
+  }
+  .status-dot {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    font-size: 12px;
+    font-weight: 500;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 16px;
+  }
+  .status-dot::before {
+    content: '';
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    background: var(--muted);
+    transition: background 0.3s;
+  }
+  .status-dot.active { color: var(--green); }
+  .status-dot.active::before {
+    background: var(--green);
+    box-shadow: 0 0 0 3px rgba(45,106,79,0.15);
+    animation: pulse 2s infinite;
+  }
+  @keyframes pulse {
+    0%, 100% { box-shadow: 0 0 0 3px rgba(45,106,79,0.15); }
+    50% { box-shadow: 0 0 0 6px rgba(45,106,79,0.07); }
+  }
+
+  .big-clock {
+    font-family: 'DM Mono', monospace;
+    font-size: 52px;
+    font-weight: 400;
+    letter-spacing: -2px;
+    color: var(--text);
+    line-height: 1;
+    margin-bottom: 6px;
+  }
+  .shift-elapsed {
+    font-size: 13px;
+    color: var(--muted);
+    min-height: 20px;
+    margin-bottom: 24px;
+    font-family: 'DM Mono', monospace;
+  }
+  .shift-elapsed.running { color: var(--green); }
+
+  .main-btn {
+    width: 100%;
+    padding: 16px;
+    border: none;
+    border-radius: 14px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 15px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: transform 0.12s, opacity 0.12s;
+    letter-spacing: 0.02em;
+  }
+  .main-btn:active { transform: scale(0.97); opacity: 0.85; }
+  .btn-start { background: var(--text); color: #fff; }
+  .btn-end { background: var(--red); color: #fff; }
+
+  .sync-status {
+    font-size: 11px;
+    color: var(--muted);
+    text-align: center;
+    margin-top: 10px;
+    min-height: 16px;
+    font-family: 'DM Mono', monospace;
+  }
+  .sync-status.ok { color: var(--green); }
+  .sync-status.err { color: var(--red); }
+
+  /* STATS ROW */
+  .stats-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 10px;
+    margin-bottom: 16px;
+  }
+  .stat {
+    background: var(--surface);
+    border-radius: 14px;
+    border: 1px solid var(--border);
+    padding: 14px 12px;
+    text-align: center;
+  }
+  .stat-label {
+    font-size: 10px;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    margin-bottom: 6px;
+  }
+  .stat-val {
+    font-family: 'DM Mono', monospace;
+    font-size: 20px;
+    font-weight: 500;
+    color: var(--text);
+  }
+
+  /* WEEK TABLE */
+  .week-card {
+    background: var(--surface);
+    border-radius: 20px;
+    border: 1px solid var(--border);
+    overflow: hidden;
+    margin-bottom: 14px;
+  }
+  .week-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 18px;
+    border-bottom: 1px solid var(--border);
+  }
+  .week-nav { display: flex; align-items: center; gap: 10px; }
+  .nav-btn {
+    background: none;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    width: 28px; height: 28px;
+    cursor: pointer;
+    font-size: 14px;
+    color: var(--text);
+    display: flex; align-items: center; justify-content: center;
+  }
+  .nav-btn:hover { background: var(--bg); }
+  .week-name { font-size: 13px; color: var(--muted); font-weight: 400; }
+  .week-total {
+    font-family: 'DM Mono', monospace;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--green);
+    background: var(--green-light);
+    padding: 4px 10px;
+    border-radius: 20px;
+  }
+
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th {
+    padding: 8px 18px;
+    text-align: left;
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    background: var(--bg);
+    border-bottom: 1px solid var(--border);
+  }
+  td {
+    padding: 11px 18px;
+    border-bottom: 1px solid var(--border);
+    color: var(--text);
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+  }
+  tr:last-child td { border-bottom: none; }
+  .td-day { font-family: 'DM Sans', sans-serif; font-size: 12px; color: var(--muted); }
+  .td-hrs { font-weight: 500; color: var(--text); }
+  .del-btn {
+    background: none; border: none; cursor: pointer;
+    color: var(--border); font-size: 16px; padding: 0 4px;
+    transition: color 0.15s;
+  }
+  .del-btn:hover { color: var(--red); }
+
+  .empty {
+    padding: 28px;
+    text-align: center;
+    font-size: 13px;
+    color: var(--muted);
+  }
+
+  .export-btn {
+    width: 100%;
+    padding: 12px;
+    background: none;
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13px;
+    color: var(--muted);
+    cursor: pointer;
+    transition: background 0.15s, color 0.15s;
+  }
+  .export-btn:hover { background: var(--surface); color: var(--text); }
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="header">
+    <span class="header-title">Трекер смен</span>
+    <span class="header-date" id="headerDate"></span>
+  </div>
+
+  <div class="clock-card">
+    <div class="status-dot" id="statusDot">не активна</div>
+    <div class="big-clock" id="bigClock">--:--</div>
+    <div class="shift-elapsed" id="elapsed">&nbsp;</div>
+    <button class="main-btn btn-start" id="mainBtn" onclick="toggleShift()">Начать смену</button>
+    <div class="sync-status" id="syncStatus">&nbsp;</div>
+  </div>
+
+  <div class="stats-row">
+    <div class="stat">
+      <div class="stat-label">неделя</div>
+      <div class="stat-val" id="sWeek">0ч</div>
+    </div>
+    <div class="stat">
+      <div class="stat-label">месяц</div>
+      <div class="stat-val" id="sMonth">0ч</div>
+    </div>
+    <div class="stat">
+      <div class="stat-label">смен</div>
+      <div class="stat-val" id="sCount">0</div>
+    </div>
+  </div>
+
+  <div class="week-card">
+    <div class="week-head">
+      <div class="week-nav">
+        <button class="nav-btn" onclick="changeWeek(-1)">‹</button>
+        <span class="week-name" id="weekName">эта неделя</span>
+        <button class="nav-btn" onclick="changeWeek(1)">›</button>
+      </div>
+      <span class="week-total" id="weekTotal">0 ч</span>
+    </div>
+    <table>
+      <thead><tr>
+        <th>день</th><th>начало</th><th>конец</th><th>часы</th><th></th>
+      </tr></thead>
+      <tbody id="tbody"></tbody>
+    </table>
+    <div class="empty" id="emptyMsg">смен пока нет</div>
+  </div>
+
+  <button class="export-btn" onclick="exportCSV()">⬇ скачать CSV</button>
+</div>
+
+<script>
+const SHEET_URL = 'https://script.google.com/macros/s/AKfycbxg06_rioq_qqvJNLKXL0GFx86B0-VwUeuCj17hw_lDbi3SI5gjQSCONecYnVWaPn-2tw/exec';
+const KEY = 'nanny_v2';
+const KEY_ACTIVE = 'nanny_active_v2';
+
+let shifts = [];
+let activeStart = null;
+let weekOffset = 0;
+let ticker = null;
+
+function load() {
+  try { shifts = JSON.parse(localStorage.getItem(KEY) || '[]'); } catch(e) { shifts = []; }
+  activeStart = localStorage.getItem(KEY_ACTIVE) || null;
+}
+function save() { localStorage.setItem(KEY, JSON.stringify(shifts)); }
+
+function fmt(ts) {
+  return new Date(ts).toLocaleTimeString('ru-RU', {hour:'2-digit', minute:'2-digit'});
+}
+function fmtDate(ts) {
+  return new Date(ts).toLocaleDateString('ru-RU', {weekday:'short', day:'numeric', month:'short'});
+}
+function fmtH(ms) {
+  const h = ms / 3600000;
+  return h < 0.01 ? '—' : h.toFixed(1) + 'ч';
+}
+
+function weekBounds(offset) {
+  const now = new Date();
+  const d = now.getDay();
+  const mon = new Date(now);
+  mon.setDate(now.getDate() - (d === 0 ? 6 : d - 1) + offset * 7);
+  mon.setHours(0,0,0,0);
+  const sun = new Date(mon);
+  sun.setDate(mon.getDate() + 6);
+  sun.setHours(23,59,59,999);
+  return { s: mon.getTime(), e: sun.getTime() };
+}
+
+async function sendToSheets(shift) {
+  const d = new Date(shift.start);
+  const payload = {
+    date: d.toLocaleDateString('ru-RU'),
+    start: fmt(shift.start),
+    end: fmt(shift.end),
+    hours: ((shift.end - shift.start) / 3600000).toFixed(2)
+  };
+  try {
+    await fetch(SHEET_URL, {
+      method: 'POST',
+      mode: 'no-cors',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify(payload)
+    });
+    showSync('✓ сохранено в таблицу', 'ok');
+  } catch(e) {
+    showSync('не удалось синхронизировать', 'err');
+  }
+}
+
+function showSync(msg, cls) {
+  const el = document.getElementById('syncStatus');
+  el.textContent = msg;
+  el.className = 'sync-status ' + cls;
+  setTimeout(() => { el.textContent = '\u00A0'; el.className = 'sync-status'; }, 4000);
+}
+
+function toggleShift() {
+  if (!activeStart) {
+    activeStart = Date.now().toString();
+    localStorage.setItem(KEY_ACTIVE, activeStart);
+    if (ticker) clearInterval(ticker);
+    ticker = setInterval(updateElapsed, 15000);
+  } else {
+    const shift = { id: Date.now(), start: parseInt(activeStart), end: Date.now() };
+    shifts.push(shift);
+    save();
+    activeStart = null;
+    localStorage.removeItem(KEY_ACTIVE);
+    clearInterval(ticker); ticker = null;
+    sendToSheets(shift);
+  }
+  render();
+}
+
+function deleteShift(id) {
+  if (!confirm('Удалить эту смену?')) return;
+  shifts = shifts.filter(s => s.id !== id);
+  save();
+  render();
+}
+
+function changeWeek(d) { weekOffset += d; render(); }
+
+function updateElapsed() {
+  if (!activeStart) return;
+  const ms = Date.now() - parseInt(activeStart);
+  const h = Math.floor(ms / 3600000);
+  const m = Math.floor((ms % 3600000) / 60000);
+  const el = document.getElementById('elapsed');
+  el.textContent = 'начало ' + fmt(parseInt(activeStart)) + '  ·  ' + (h > 0 ? h + 'ч ' : '') + m + 'мин';
+  el.className = 'shift-elapsed running';
+}
+
+function render() {
+  const now = new Date();
+  document.getElementById('bigClock').textContent =
+    now.toLocaleTimeString('ru-RU', {hour:'2-digit', minute:'2-digit'});
+  document.getElementById('headerDate').textContent =
+    now.toLocaleDateString('ru-RU', {day:'numeric', month:'long'});
+
+  const active = !!activeStart;
+  const dot = document.getElementById('statusDot');
+  const btn = document.getElementById('mainBtn');
+  if (active) {
+    dot.textContent = 'смена идёт'; dot.className = 'status-dot active';
+    btn.textContent = 'Завершить смену'; btn.className = 'main-btn btn-end';
+    updateElapsed();
+    if (!ticker) ticker = setInterval(updateElapsed, 15000);
+  } else {
+    dot.textContent = 'не активна'; dot.className = 'status-dot';
+    btn.textContent = 'Начать смену'; btn.className = 'main-btn btn-start';
+    const el = document.getElementById('elapsed');
+    el.textContent = '\u00A0'; el.className = 'shift-elapsed';
+  }
+
+  const { s: ws, e: we } = weekBounds(weekOffset);
+  const wShifts = shifts.filter(x => x.start >= ws && x.start <= we).sort((a,b) => b.start - a.start);
+  const wMs = wShifts.reduce((s,x) => s + (x.end - x.start), 0);
+
+  document.getElementById('weekTotal').textContent = (wMs/3600000).toFixed(1) + ' ч';
+  document.getElementById('weekName').textContent =
+    weekOffset === 0 ? 'эта неделя' :
+    weekOffset === -1 ? 'прошлая неделя' :
+    new Date(ws).toLocaleDateString('ru-RU', {day:'numeric', month:'short'});
+
+  const tbody = document.getElementById('tbody');
+  const empty = document.getElementById('emptyMsg');
+  if (wShifts.length === 0) {
+    tbody.innerHTML = ''; empty.style.display = 'block';
+  } else {
+    empty.style.display = 'none';
+    tbody.innerHTML = wShifts.map(s => `
+      <tr>
+        <td class="td-day">${fmtDate(s.start)}</td>
+        <td>${fmt(s.start)}</td>
+        <td>${fmt(s.end)}</td>
+        <td class="td-hrs">${fmtH(s.end - s.start)}</td>
+        <td><button class="del-btn" onclick="deleteShift(${s.id})">×</button></td>
+      </tr>`).join('');
+  }
+
+  const now2 = Date.now();
+  const mStart = new Date(now.getFullYear(), now.getMonth(), 1).getTime();
+  const { s: cws, e: cwe } = weekBounds(0);
+  const mMs = shifts.filter(x => x.start >= mStart).reduce((s,x) => s + (x.end - x.start), 0);
+  const cwMs = shifts.filter(x => x.start >= cws && x.start <= cwe).reduce((s,x) => s + (x.end - x.start), 0);
+
+  document.getElementById('sWeek').textContent = (cwMs/3600000).toFixed(1) + 'ч';
+  document.getElementById('sMonth').textContent = (mMs/3600000).toFixed(1) + 'ч';
+  document.getElementById('sCount').textContent = shifts.length;
+}
+
+function exportCSV() {
+  const rows = [['дата','начало','конец','часов']];
+  [...shifts].sort((a,b) => a.start - b.start).forEach(s => {
+    rows.push([
+      new Date(s.start).toLocaleDateString('ru-RU'),
+      fmt(s.start), fmt(s.end),
+      ((s.end - s.start)/3600000).toFixed(2)
+    ]);
+  });
+  const a = document.createElement('a');
+  a.href = 'data:text/csv;charset=utf-8,' + encodeURIComponent('\uFEFF' + rows.map(r => r.join(';')).join('\n'));
+  a.download = 'nanny_shifts.csv';
+  a.click();
+}
+
+setInterval(() => {
+  document.getElementById('bigClock').textContent =
+    new Date().toLocaleTimeString('ru-RU', {hour:'2-digit', minute:'2-digit'});
+}, 30000);
+
+load();
+render();
+</script>
+</body>
+</html>
